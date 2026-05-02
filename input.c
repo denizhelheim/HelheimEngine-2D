@@ -31,7 +31,6 @@ int MovePlayerTo(int newX, int newY) {
             score += e->collectibleValue;
             starsCollected++;
             e->active = 0;
-            // Don't clear map yet - will be updated below
             
             if (gameConfig.enableParticles) {
                 for (int p = 0; p < 5; p++) {
@@ -47,9 +46,11 @@ int MovePlayerTo(int newX, int newY) {
         Entity* e = &entities[i];
         if (e->active && e->type == ENTITY_ENEMY &&
             (int)e->position.x == newX && (int)e->position.y == newY) {
-            if (health > 0 && player->health) {
+            // Yalnızca hasar bağışıklığı yoksa hasar ver
+            if (player->health->invulnerableTimer <= 0) {
                 health -= 10;
-                if (health < 0) health = 0;  // Prevent negative health
+                if (health < 0) health = 0;
+                player->health->health = health;    // bileşen sağlığını güncelle
                 player->health->invulnerableTimer = 20;
             }
         }
@@ -63,10 +64,14 @@ int MovePlayerTo(int newX, int newY) {
         return 2;  // Won signal
     }
     
-    // Check hazards
+    // Check hazards (lava)
     if (tileMap[newY][newX].type == TILE_LAVA) {
-        health -= 5;
-        if (health < 0) health = 0;
+        if (player->health->invulnerableTimer <= 0) {
+            health -= 5;
+            if (health < 0) health = 0;
+            player->health->health = health;
+            player->health->invulnerableTimer = 20;
+        }
     }
     
     // Update player position in map AFTER all checks

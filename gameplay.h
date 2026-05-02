@@ -2,6 +2,7 @@
 #define GAMEPLAY_H
 
 void LoadDefaultLevel();
+void LoadLevelFromMap();
 void PlayCurrentLevel();
 void ShowGameOverScreen();
 

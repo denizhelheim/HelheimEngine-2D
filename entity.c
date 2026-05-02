@@ -20,13 +20,47 @@ void InitializeEntity(Entity* entity) {
 }
 
 void FreeEntity(Entity* entity) {
-    if (entity->animation) free(entity->animation);
-    if (entity->physics) free(entity->physics);
-    if (entity->health) free(entity->health);
-    if (entity->behavior) free(entity->behavior);
+    if (entity->animation) { free(entity->animation); entity->animation = NULL; }
+    if (entity->physics)   { free(entity->physics);   entity->physics = NULL; }
+    if (entity->health)    { free(entity->health);    entity->health = NULL; }
+    if (entity->behavior)  { free(entity->behavior);  entity->behavior = NULL; }
 }
 
 Entity* CreateEntity(EntityType type, float x, float y, char displayChar) {
+    // Önce pasif bir yuva ara
+    for (int i = 0; i < entityCount; i++) {
+        if (!entities[i].active) {
+            Entity* entity = &entities[i];
+            // Bileşenleri sıfırla
+            if (entity->animation) memset(entity->animation, 0, sizeof(AnimationComponent));
+            if (entity->physics)   memset(entity->physics, 0, sizeof(PhysicsComponent));
+            if (entity->health)    memset(entity->health, 0, sizeof(HealthComponent));
+            if (entity->behavior)  memset(entity->behavior, 0, sizeof(BehaviorComponent));
+            
+            entity->active = 1;
+            entity->type = type;
+            entity->position.x = x;
+            entity->position.y = y;
+            entity->displayChar = displayChar;
+            entity->size.x = 1;
+            entity->size.y = 1;
+            entity->layer = 0;
+            
+            entity->animation->frameCount = 1;
+            entity->animation->currentFrame = 0;
+            entity->animation->isAnimating = 0;
+            entity->physics->velocity.x = 0;
+            entity->physics->velocity.y = 0;
+            entity->physics->mass = 1;
+            entity->health->health = 100;
+            entity->health->maxHealth = 100;
+            entity->health->invulnerableTimer = 0;
+            
+            return entity;
+        }
+    }
+    
+    // Yeni yuva oluştur
     if (entityCount >= MAX_ENTITIES) return NULL;
     
     Entity* entity = &entities[entityCount];
@@ -116,7 +150,7 @@ void UpdateEnemyAI(Entity* enemy) {
                 case 3: newX++; break;  // Right
             }
             
-            // Check boundaries and walls
+            // Check boundaries and walls, also oyuncunun üzerine yürüme
             if (newX >= 0 && newX < WIDTH && newY >= 0 && newY < HEIGHT && 
                 map[newY][newX] != '#' && map[newY][newX] != 'P') {
                 // Clear old position
@@ -157,9 +191,9 @@ void UpdateEnemyAI(Entity* enemy) {
                 }
             }
             
-            // Check boundaries and walls before moving
+            // Check boundaries and walls before moving, oyuncunun üzerine yürüme
             if (newX >= 0 && newX < WIDTH && newY >= 0 && newY < HEIGHT && 
-                map[newY][newX] != '#') {
+                map[newY][newX] != '#' && map[newY][newX] != 'P') {
                 // Clear old position
                 if (map[oldY][oldX] == 'G') map[oldY][oldX] = '.';
                 

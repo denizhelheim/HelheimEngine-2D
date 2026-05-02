@@ -35,7 +35,18 @@ int ShowMainMenu() {
         switch (choice) {
             case '1': return 1;
             case '2': return 2;
-            case '3': return (hasCustomLevel ? 3 : 0);
+            case '3':
+                if (hasCustomLevel) return 3;
+                else {
+                    system("cls");
+                    printf("╔════════════════════════════════════════╗\n");
+                    printf("║    No custom level found!             ║\n");
+                    printf("║    Please create one in Level Editor.  ║\n");
+                    printf("╚════════════════════════════════════════╝\n");
+                    printf("\nPress any key to continue...\n");
+                    getch();
+                }
+                break;
             case '4': return 4;
             case '5': return 5;
             case '6': return 6;
@@ -87,7 +98,7 @@ void AdvancedLevelEditor() {
         printf("║  1=Wall(#) 2=Lava(~) 3=Ice(=) 4=Exit  ║\n");
         printf("║  5=Empty(.) 6=Spawn(S)                ║\n");
         printf("║ ENTITY MODE (E):                       ║\n");
-        printf("║  1=Star(*) 2=Enemy(G) 3=Hazard        ║\n");
+        printf("║  1=Star(*) 2=Enemy(G)                 ║\n");
         printf("║ P: Set player start     T/E: Mode     ║\n");
         printf("║ ENTER: Save  Q: Quit                   ║\n");
         printf("╚════════════════════════════════════════╝\n");
@@ -119,12 +130,33 @@ void AdvancedLevelEditor() {
                 if (!editMode) {
                     SetTile(cursorX, cursorY, TILE_WALL);
                     map[cursorY][cursorX] = '#';
+                } else {
+                    // Entity mode: yıldız ekle
+                    if (entityCount < MAX_ENTITIES) {
+                        Entity* star = CreateEntity(ENTITY_COLLECTIBLE, cursorX, cursorY, '*');
+                        if (star) {
+                            star->collectibleValue = 10;
+                            map[cursorY][cursorX] = '*';
+                        }
+                    }
                 }
                 break;
             case '2':
                 if (!editMode) {
                     SetTile(cursorX, cursorY, TILE_LAVA);
                     map[cursorY][cursorX] = '~';
+                } else {
+                    // Entity mode: düşman ekle
+                    if (entityCount < MAX_ENTITIES) {
+                        Entity* enemy = CreateEntity(ENTITY_ENEMY, cursorX, cursorY, 'G');
+                        if (enemy && enemy->behavior) {
+                            enemy->health->health = 30;
+                            enemy->behavior->visionRange = 5;
+                            enemy->behavior->state = 0;
+                            enemy->behavior->moveTimer = 0;
+                            map[cursorY][cursorX] = 'G';
+                        }
+                    }
                 }
                 break;
             case '3':
@@ -149,29 +181,6 @@ void AdvancedLevelEditor() {
                 if (!editMode) {
                     SetTile(cursorX, cursorY, TILE_SPAWN);
                     map[cursorY][cursorX] = 'S';
-                }
-                break;
-            
-            // Entity mode
-            case '!':  // Shift+1
-                if (editMode && entityCount < MAX_ENTITIES) {
-                    Entity* star = CreateEntity(ENTITY_COLLECTIBLE, cursorX, cursorY, '*');
-                    if (star) {
-                        star->collectibleValue = 10;
-                        map[cursorY][cursorX] = '*';
-                    }
-                }
-                break;
-            case '@':  // Shift+2
-                if (editMode && entityCount < MAX_ENTITIES) {
-                    Entity* enemy = CreateEntity(ENTITY_ENEMY, cursorX, cursorY, 'G');
-                    if (enemy && enemy->behavior) {
-                        enemy->health->health = 30;
-                        enemy->behavior->visionRange = 5;
-                        enemy->behavior->state = 0;
-                        enemy->behavior->moveTimer = 0;
-                        map[cursorY][cursorX] = 'G';
-                    }
                 }
                 break;
             
@@ -226,26 +235,32 @@ void DifficultyMenu() {
         if (choice == '1') {
             gameConfig.difficulty = DIFFICULTY_EASY;
             maxHealth = 150;
-            // Sync current health if game is running
-            if (gameState == STATE_PLAYING && health > maxHealth) {
-                health = maxHealth;
+            // Oyuncu bileşenini güncelle
+            if (player && player->health) {
+                player->health->maxHealth = maxHealth;
+                if (player->health->health > maxHealth) player->health->health = maxHealth;
             }
+            if (gameState == STATE_PLAYING && health > maxHealth) health = maxHealth;
             return;
         }
         else if (choice == '2') {
             gameConfig.difficulty = DIFFICULTY_NORMAL;
             maxHealth = 100;
-            if (gameState == STATE_PLAYING && health > maxHealth) {
-                health = maxHealth;
+            if (player && player->health) {
+                player->health->maxHealth = maxHealth;
+                if (player->health->health > maxHealth) player->health->health = maxHealth;
             }
+            if (gameState == STATE_PLAYING && health > maxHealth) health = maxHealth;
             return;
         }
         else if (choice == '3') {
             gameConfig.difficulty = DIFFICULTY_HARD;
             maxHealth = 50;
-            if (gameState == STATE_PLAYING && health > maxHealth) {
-                health = maxHealth;
+            if (player && player->health) {
+                player->health->maxHealth = maxHealth;
+                if (player->health->health > maxHealth) player->health->health = maxHealth;
             }
+            if (gameState == STATE_PLAYING && health > maxHealth) health = maxHealth;
             return;
         }
         else if (choice == 'q' || choice == 'Q') {

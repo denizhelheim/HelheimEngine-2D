@@ -27,19 +27,19 @@ void LoadDefaultLevel() {
     }
     entityCount = 0;
     particleCount = 0;
-    player = NULL;  // Reset player pointer
+    player = NULL;
     
-    // Load map
+    // Varsayılan haritayı oluştur
     InitializeDefaultMap();
     
-    // Create player
+    // Oyuncuyu oluştur
     player = CreateEntity(ENTITY_PLAYER, defaultPlayerX, defaultPlayerY, 'P');
     if (player) {
         player->health->health = health;
         map[defaultPlayerY][defaultPlayerX] = 'P';
     }
     
-    // Create collectible entities from map
+    // Haritadaki toplanabilirleri varlık olarak ekle
     for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
             if (map[y][x] == '*') {
@@ -51,33 +51,85 @@ void LoadDefaultLevel() {
         }
     }
     
-    // Add some enemies at safe spawn points to avoid overlap
+    // Düşmanları ekle (güvenli noktalara)
     for (int i = 0; i < 3; i++) {
         int spawnX, spawnY;
+        if (i == 0) { spawnX = 2; spawnY = 2; }
+        else if (i == 1) { spawnX = WIDTH - 3; spawnY = 2; }
+        else { spawnX = WIDTH / 2; spawnY = HEIGHT - 3; }
         
-        // Create diverse spawn points
-        if (i == 0) {
-            spawnX = 2;
-            spawnY = 2;
-        } else if (i == 1) {
-            spawnX = WIDTH - 3;
-            spawnY = 2;
-        } else {
-            spawnX = WIDTH / 2;
-            spawnY = HEIGHT - 3;
-        }
-        
-        // Avoid spawning on player, walls, or collectibles
         if (map[spawnY][spawnX] != '#' && map[spawnY][spawnX] != 'P' && map[spawnY][spawnX] != '*') {
             Entity* enemy = CreateEntity(ENTITY_ENEMY, spawnX, spawnY, 'G');
             if (enemy && enemy->behavior && enemy->health) {
                 enemy->health->health = 30;
                 enemy->behavior->visionRange = 5;
-                enemy->behavior->state = 0;  // Idle state
+                enemy->behavior->state = 0;
                 enemy->behavior->moveTimer = 0;
                 enemy->behavior->moveDirection = 0;
                 map[spawnY][spawnX] = 'G';
             }
+        }
+    }
+}
+
+void LoadLevelFromMap() {
+    // Mevcut map ve tileMap üzerinden bölümü başlat
+    // (Özel bölüm editörden sonra burada kullanılır)
+    score = 0;
+    health = maxHealth;
+    won = 0;
+    levelTime = 0;
+    starsCollected = 0;
+    totalStars = 0;
+    screenCleared = 0;
+    gameState = STATE_PLAYING;
+    
+    // Varlıkları temizle
+    for (int i = 0; i < entityCount; i++) {
+        if (entities[i].active) FreeEntity(&entities[i]);
+    }
+    entityCount = 0;
+    particleCount = 0;
+    player = NULL;
+    
+    // Haritadaki karakterlere göre varlıkları oluştur
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            if (map[y][x] == 'P') {
+                player = CreateEntity(ENTITY_PLAYER, x, y, 'P');
+                if (player) {
+                    player->health->health = health;
+                    // Başlangıç pozisyonunu güncelle (editörün kaydettiği)
+                    defaultPlayerX = x;
+                    defaultPlayerY = y;
+                }
+            }
+            else if (map[y][x] == '*') {
+                Entity* collectible = CreateEntity(ENTITY_COLLECTIBLE, x, y, '*');
+                if (collectible) {
+                    collectible->collectibleValue = 10;
+                    totalStars++;
+                }
+            }
+            else if (map[y][x] == 'G') {
+                Entity* enemy = CreateEntity(ENTITY_ENEMY, x, y, 'G');
+                if (enemy && enemy->behavior && enemy->health) {
+                    enemy->health->health = 30;
+                    enemy->behavior->visionRange = 5;
+                    enemy->behavior->state = 0;
+                    enemy->behavior->moveTimer = 0;
+                    enemy->behavior->moveDirection = 0;
+                }
+            }
+        }
+    }
+    
+    if (!player) {
+        // Eğer oyuncu konulmamışsa varsayılan noktaya yerleştir
+        player = CreateEntity(ENTITY_PLAYER, 1, 1, 'P');
+        if (player) {
+            player->health->health = health;
+            map[1][1] = 'P';
         }
     }
 }
